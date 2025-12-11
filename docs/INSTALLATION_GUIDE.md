@@ -73,6 +73,16 @@ Debes crear las tablas necesarias en tu proyecto de Supabase.
 3. Copia el contenido del SQL y ejecútalo en Supabase.
 4. **Verifica:** Deberías ver tablas como `users`, `irp_reviews`, `sandbox_history`.
 
+### 4.1 Crear Usuario Demo (Obligatorio para Testing)
+
+1. Abre el archivo local: `supabase/seed.sql`.
+2. Copia el SQL y ejecútalo en el **SQL Editor** de Supabase.
+3. **Credenciales del usuario demo:**
+   - **Email:** `demo@aicodementor.com`
+   - **Password:** `demo123`
+
+> **Nota:** Este usuario es necesario para los tests E2E y para probar la aplicación.
+
 ### 5. Iniciar Servidor de Desarrollo
 
 ```bash
@@ -91,7 +101,7 @@ Una vez corriendo, realiza estas pruebas para confirmar que todo funciona:
 | Prueba | Acción | Resultado Esperado |
 |--------|--------|-------------------|
 | **Front** | Abrir `http://localhost:3000` | Carga Landing Page sin errores. |
-| **Auth** | Ir a `/login` e ingresar | Redirige al Panel de Control. |
+| **Auth** | Ir a `/login` con `demo@aicodementor.com` / `demo123` | Redirige al Panel de Control. |
 | **IA** | Ir a `/codigo` (Sandbox) | Genera una lección al enviar texto. |
 | **DB** | Guardar lección en Sandbox | Aparece en el Historial (derecha). |
 

@@ -79,3 +79,6 @@ audit-report.json
 
 # Development temporary files
 DEPENDABOT_INVESTIGATION_README.md
+
+# Application logs
+logs/

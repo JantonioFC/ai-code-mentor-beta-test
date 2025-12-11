@@ -76,20 +76,23 @@ GEMINI_API_KEY=tu-gemini-api-key
 JWT_SECRET=tu-secreto-compartido
 ```
 
-4. **Inicializar Base de Datos (Supabase):**
-   - Ejecuta el script SQL ubicado en `supabase/migrations/irp_migration.sql` en el SQL Editor de tu proyecto Supabase.
-   - Esto creará las tablas necesarias (`irp_review_requests`, `irp_peer_reviews`, etc.).
+4. **Inicializar Base de Datos (una sola vez):**
+   - Ve al **SQL Editor** de tu proyecto Supabase
+   - Ejecuta el contenido de: `supabase/migrations/irp_migration.sql`
 
 5. **Iniciar el ecosistema:**
 ```bash
-# Comando único (Puerto 3000)
 npm run dev
 ```
 
+> **🔧 Auto-Setup:** Al ejecutar `npm run dev`, el sistema automáticamente:
+> - ✅ Verifica que las tablas existen
+> - ✅ Crea el usuario demo (`demo@aicodementor.com` / `demo123`)
+
 6. **Verificar instalación:**
    - Abre `http://localhost:3000`
-   - Health Check IA: `http://localhost:3000/api/v2/health` 🆕
-   - Health Check IRP: `http://localhost:3000/api/v1/irp/health`
+   - Login: `demo@aicodementor.com` / `demo123`
+   - Health Check IA: `http://localhost:3000/api/v2/health`
 
 ## 🧪 Testing y Validación (Actualizado v19.0)
 
