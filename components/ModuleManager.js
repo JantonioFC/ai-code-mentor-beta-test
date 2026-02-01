@@ -1,100 +1,43 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useLessonContext } from '../contexts/LessonContext';
 import IntegratedExerciseEnvironment from './IntegratedExerciseEnvironment';
+import { useCurriculumSource } from '../hooks/modules/useCurriculumSource';
+import { useLessonSelection } from '../hooks/modules/useLessonSelection';
+import { useCacheControl } from '../hooks/modules/useCacheControl';
 
 export default function ModuleManager() {
-  // Estados locales para selección (no necesitan persistencia)
-  const [curriculum, setCurriculum] = useState({});
-  const [selectedLanguage, setSelectedLanguage] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedLesson, setSelectedLesson] = useState('');
-  
-  // Estados persistentes desde contexto (resuelve Issue #3: Persistencia)
+  // 1. Hooks de Datos y Lógica
+  const { curriculum, error: sourceError } = useCurriculumSource();
+  const {
+    selectedLanguage, selectedCategory, selectedLesson,
+    setLanguage, setCategory, setLesson, resetSelection: resetLocalSelection,
+    availableCategories, availableLessons, currentLessonInfo
+  } = useLessonSelection(curriculum);
+
+  const { clearCache, isClearing } = useCacheControl();
+
+  // 2. Contexto Global
   const {
     currentLesson,
     isLoading,
-    error,
+    error: ctxError,
     loadingProgress,
     lessonHistory,
     generateLesson,
     clearCurrentLesson,
     reloadCurrentLesson
   } = useLessonContext();
-  
-  // Estados para sistema de cache
-  const [isClearingCache, setIsClearingCache] = useState(false);
-
-  // Cargar curriculum desde sources.json al montar el componente
-  useEffect(() => {
-    loadCurriculum();
-  }, []);
-
-  const loadCurriculum = async () => {
-    try {
-      const response = await fetch('/sources.json');
-      if (!response.ok) {
-        throw new Error('Error cargando el curriculum');
-      }
-      const data = await response.json();
-      setCurriculum(data.curriculum);
-    } catch (err) {
-      console.error('Error cargando curriculum:', err);
-      setError('No se pudo cargar el curriculum. Verifique que sources.json esté disponible.');
-    }
-  };
 
   const handleLessonSelection = async () => {
-    // Usar la función del contexto que maneja persistencia automáticamente
     await generateLesson(selectedLanguage, selectedCategory, selectedLesson);
   };
 
-  const resetSelection = () => {
-    // Limpiar lección actual (se maneja por contexto)
+  const handleReset = () => {
     clearCurrentLesson();
-    
-    // Limpiar estados de selección locales
-    setSelectedLanguage('');
-    setSelectedCategory('');
-    setSelectedLesson('');
+    resetLocalSelection();
   };
 
-  const getAvailableCategories = () => {
-    if (!selectedLanguage || !curriculum[selectedLanguage]) return [];
-    return Object.keys(curriculum[selectedLanguage]);
-  };
-
-  const getAvailableLessons = () => {
-    if (!selectedLanguage || !selectedCategory || !curriculum[selectedLanguage]?.[selectedCategory]) return [];
-    return Object.keys(curriculum[selectedLanguage][selectedCategory]);
-  };
-
-  const getLessonInfo = () => {
-    if (!selectedLanguage || !selectedCategory || !selectedLesson) return null;
-    return curriculum[selectedLanguage]?.[selectedCategory]?.[selectedLesson];
-  };
-
-  // Función para limpiar cache obsoleto
-  const handleClearCache = async () => {
-    setIsClearingCache(true);
-    try {
-      const response = await fetch('/api/clear-cache', {
-        method: 'POST',
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        alert(`🧺 Cache limpiado exitosamente: ${data.deletedCount} archivos eliminados.\n\nAhora puedes generar lecciones frescas con ejercicios mejorados.`);
-      } else {
-        throw new Error(data.error);
-      }
-    } catch (error) {
-      console.error('Error limpiando cache:', error);
-      alert('❌ Error limpiando cache: ' + error.message);
-    } finally {
-      setIsClearingCache(false);
-    }
-  };
+  const finalError = sourceError || ctxError;
 
 
 
@@ -114,15 +57,15 @@ export default function ModuleManager() {
         <div className="inline-flex items-center px-3 py-1 bg-gradient-to-r from-green-100 to-blue-100 text-gray-700 rounded-full text-sm">
           🔄 Flujo: Fuentes Oficiales → IA → Lecciones → Ejercicios Ejecutables → Auto-Guardado
         </div>
-        
+
         {/* Controles de Sistema V4.1 */}
         <div className="mt-4 flex justify-center space-x-3">
           <button
-            onClick={handleClearCache}
-            disabled={isClearingCache}
+            onClick={clearCache}
+            disabled={isClearing}
             className="px-3 py-2 bg-red-50 border border-red-200 text-red-700 rounded-md hover:bg-red-100 transition-colors text-sm disabled:opacity-50"
           >
-            {isClearingCache ? '🔄 Limpiando...' : '🧺 Limpiar Cache'}
+            {isClearing ? '🔄 Limpiando...' : '🧺 Limpiar Cache'}
           </button>
           <div className="text-xs text-gray-500 flex items-center">
             🔧 V4.2 - Ejercicios Ejecutables + Auto-Guardado 100% Automático
@@ -138,7 +81,7 @@ export default function ModuleManager() {
                 ✅ AUTOMÁTICO
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-green-700">
               <div className="flex items-center">
                 <span className="text-green-500 mr-2">✅</span>
@@ -153,7 +96,7 @@ export default function ModuleManager() {
                 <span>Ubicación: /exports/lecciones/</span>
               </div>
             </div>
-            
+
             <div className="mt-3 p-2 bg-green-100 rounded text-xs text-green-800">
               🔥 <strong>Sin intervención manual:</strong> Todo se guarda automáticamente - lecciones, ejercicios, código, correcciones y progreso.
             </div>
@@ -173,25 +116,20 @@ export default function ModuleManager() {
               {Object.keys(curriculum).map((language) => (
                 <button
                   key={language}
-                  onClick={() => {
-                    setSelectedLanguage(language);
-                    setSelectedCategory('');
-                    setSelectedLesson('');
-                  }}
-                  className={`p-4 border-2 rounded-lg text-left transition-all ${
-                    selectedLanguage === language
-                      ? 'border-purple-500 bg-purple-50 text-purple-700'
-                      : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100'
-                  }`}
+                  onClick={() => setLanguage(language)}
+                  className={`p-4 border-2 rounded-lg text-left transition-all ${selectedLanguage === language
+                    ? 'border-purple-500 bg-purple-50 text-purple-700'
+                    : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100'
+                    }`}
                 >
                   <div className="font-medium capitalize">
-                    {language === 'python' && '🐍'} 
-                    {language === 'javascript' && '🟨'} 
-                    {language === 'react' && '⚛️'} 
+                    {language === 'python' && '🐍'}
+                    {language === 'javascript' && '🟨'}
+                    {language === 'react' && '⚛️'}
                     {language}
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
-                    {Object.keys(curriculum[language]).length} categorías disponibles
+                    {curriculum[language] ? Object.keys(curriculum[language]).length : 0} categorías disponibles
                   </div>
                 </button>
               ))}
@@ -205,24 +143,20 @@ export default function ModuleManager() {
                 2. Selecciona la Categoría
               </label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {getAvailableCategories().map((category) => (
+                {availableCategories.map((category) => (
                   <button
                     key={category}
-                    onClick={() => {
-                      setSelectedCategory(category);
-                      setSelectedLesson('');
-                    }}
-                    className={`p-4 border-2 rounded-lg text-left transition-all ${
-                      selectedCategory === category
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100'
-                    }`}
+                    onClick={() => setCategory(category)}
+                    className={`p-4 border-2 rounded-lg text-left transition-all ${selectedCategory === category
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100'
+                      }`}
                   >
                     <div className="font-medium capitalize">
                       📖 {category.replace(/([A-Z])/g, ' $1')}
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
-                      {Object.keys(curriculum[selectedLanguage][category]).length} lecciones
+                      {curriculum[selectedLanguage][category] ? Object.keys(curriculum[selectedLanguage][category]).length : 0} lecciones
                     </div>
                   </button>
                 ))}
@@ -237,17 +171,16 @@ export default function ModuleManager() {
                 3. Selecciona la Lección Específica
               </label>
               <div className="grid grid-cols-1 gap-3">
-                {getAvailableLessons().map((lesson) => {
+                {availableLessons.map((lesson) => {
                   const lessonInfo = curriculum[selectedLanguage][selectedCategory][lesson];
                   return (
                     <button
                       key={lesson}
-                      onClick={() => setSelectedLesson(lesson)}
-                      className={`p-4 border-2 rounded-lg text-left transition-all ${
-                        selectedLesson === lesson
-                          ? 'border-green-500 bg-green-50 text-green-700'
-                          : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100'
-                      }`}
+                      onClick={() => setLesson(lesson)}
+                      className={`p-4 border-2 rounded-lg text-left transition-all ${selectedLesson === lesson
+                        ? 'border-green-500 bg-green-50 text-green-700'
+                        : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100'
+                        }`}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
@@ -257,11 +190,10 @@ export default function ModuleManager() {
                           </div>
                         </div>
                         <div className="flex items-center space-x-2 text-xs">
-                          <span className={`px-2 py-1 rounded-full ${
-                            lessonInfo.difficulty === 'beginner' ? 'bg-green-100 text-green-800' :
+                          <span className={`px-2 py-1 rounded-full ${lessonInfo.difficulty === 'beginner' ? 'bg-green-100 text-green-800' :
                             lessonInfo.difficulty === 'intermediate' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
+                              'bg-red-100 text-red-800'
+                            }`}>
                             {lessonInfo.difficulty}
                           </span>
                           <span className="text-gray-500">
@@ -281,14 +213,14 @@ export default function ModuleManager() {
             <div className="space-y-4">
               <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-6">
                 <h3 className="font-medium text-purple-800 mb-2">
-                  🎯 Lección Seleccionada: {getLessonInfo()?.title}
+                  🎯 Lección Seleccionada: {currentLessonInfo?.title}
                 </h3>
                 <div className="grid grid-cols-2 gap-4 text-sm text-purple-700">
                   <div>
-                    <strong>Fuente Oficial:</strong> 
-                    <a 
-                      href={getLessonInfo()?.source_url} 
-                      target="_blank" 
+                    <strong>Fuente Oficial:</strong>
+                    <a
+                      href={currentLessonInfo?.source_url}
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-600 hover:underline ml-1"
                     >
@@ -296,7 +228,7 @@ export default function ModuleManager() {
                     </a>
                   </div>
                   <div>
-                    <strong>Tiempo estimado:</strong> {getLessonInfo()?.estimated_time}
+                    <strong>Tiempo estimado:</strong> {currentLessonInfo?.estimated_time}
                   </div>
                 </div>
                 <button
@@ -318,7 +250,7 @@ export default function ModuleManager() {
                 <span>{loadingProgress}%</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
+                <div
                   className="bg-gradient-to-r from-purple-600 to-blue-600 h-2 rounded-full transition-all duration-300"
                   style={{ width: `${loadingProgress}%` }}
                 ></div>
@@ -327,13 +259,13 @@ export default function ModuleManager() {
           )}
 
           {/* Error Display */}
-          {error && (
+          {finalError && (
             <div className="bg-red-50 border border-red-200 rounded-md p-4">
               <div className="flex">
                 <div className="text-red-400 mr-3">⚠️</div>
                 <div>
                   <h3 className="text-sm font-medium text-red-800">Error al generar lección</h3>
-                  <p className="text-sm text-red-700 mt-1">{error}</p>
+                  <p className="text-sm text-red-700 mt-1">{finalError}</p>
                 </div>
               </div>
             </div>
@@ -354,11 +286,10 @@ export default function ModuleManager() {
                         {historyItem.path} • {new Date(historyItem.accessed_at).toLocaleDateString()}
                       </div>
                     </div>
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      historyItem.difficulty === 'beginner' ? 'bg-green-100 text-green-800' :
+                    <span className={`text-xs px-2 py-1 rounded-full ${historyItem.difficulty === 'beginner' ? 'bg-green-100 text-green-800' :
                       historyItem.difficulty === 'intermediate' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
+                        'bg-red-100 text-red-800'
+                      }`}>
                       {historyItem.difficulty}
                     </span>
                   </div>
@@ -421,7 +352,7 @@ export default function ModuleManager() {
                   ♾️ Recargar
                 </button>
                 <button
-                  onClick={resetSelection}
+                  onClick={handleReset}
                   className="px-4 py-2 bg-white border border-green-300 text-green-700 rounded-md hover:bg-green-50 transition-colors"
                 >
                   🔄 Nueva Lección
@@ -440,7 +371,7 @@ export default function ModuleManager() {
                 🤖 Generado por IA • {new Date(currentLesson.generated_at).toLocaleString()}
               </div>
             </div>
-            
+
             <div className="prose prose-lg max-w-none text-gray-700">
               <div className="whitespace-pre-wrap leading-relaxed">
                 {currentLesson.content}
@@ -458,11 +389,11 @@ export default function ModuleManager() {
                 AUTOMÁTICO
               </div>
             </div>
-            
+
             <p className="text-sm text-green-700 mb-4">
               Esta lección se guardó automáticamente en tu biblioteca personal sin necesidad de intervención manual.
             </p>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-green-700">
               <div className="flex items-center">
                 <span className="text-green-500 mr-2">📁</span>
@@ -477,7 +408,7 @@ export default function ModuleManager() {
                 <span>Progreso registrado automáticamente</span>
               </div>
             </div>
-            
+
             <div className="mt-3 p-2 bg-green-100 rounded text-xs text-green-800">
               📂 <strong>Ubicación:</strong> /exports/lecciones/ • <strong>Timestamp:</strong> {new Date(currentLesson.generated_at).toLocaleString()}
             </div>
@@ -485,7 +416,7 @@ export default function ModuleManager() {
 
           {/* Integrated Exercise Environment V4.2 */}
           {currentLesson.exercises && currentLesson.exercises.length > 0 && (
-            <IntegratedExerciseEnvironment 
+            <IntegratedExerciseEnvironment
               exercises={currentLesson.exercises}
               lessonPath={currentLesson.path}
               language={currentLesson.path.split('.')[0]}
@@ -497,7 +428,7 @@ export default function ModuleManager() {
             <h5 className="font-medium text-purple-800 mb-3">🎯 Temas Cubiertos:</h5>
             <div className="flex flex-wrap gap-2">
               {currentLesson.topics.map((topic, index) => (
-                <span 
+                <span
                   key={index}
                   className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm"
                 >

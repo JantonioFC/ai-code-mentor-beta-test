@@ -1,76 +1,49 @@
-import { withOptionalAuth } from '../../../../utils/authMiddleware';
+import { z } from 'zod';
+import { createApiHandler, sendSuccess } from '../../../../lib/api/APIWrapper';
+import { withValidation } from '../../../../lib/api/validate';
 import { lessonService } from '../../../../lib/services/LessonService';
 import { logger } from '../../../../lib/utils/logger';
-import { validate } from '../../../../lib/middleware/validate';
 
-/**
- * @api {post} /api/v1/lessons/generate Generar Lección
- * @description Genera una lección educativa basada en el contexto del currículo.
- * 
- * @body {number} semanaId - ID de la semana
- * @body {number} dia|diaIndex - Día (1-5) o índice (0-4)
- * @body {number} pomodoroIndex - Índice del pomodoro
- * @body {boolean} includeMultimodal - Incluir diagramas (opcional)
- * @body {boolean} useStorytellingPrompt - Usar prompts con storytelling y CoT (default: true)
- * @body {boolean} useLLMJudge - Usar LLM-as-Judge para evaluación (default: false)
- * 
- * @header X-User-Id - ID del usuario (opcional)
- */
+// Esquema de validación estricto con Zod
+const generateLessonSchema = z.object({
+    semanaId: z.number().int().positive(),
+    dia: z.number().int().min(1).max(7).optional(),
+    diaIndex: z.number().int().min(0).max(6).optional(),
+    pomodoroIndex: z.number().int().min(0),
+    includeMultimodal: z.boolean().optional().default(false),
+    useStorytellingPrompt: z.boolean().optional().default(true),
+    useLLMJudge: z.boolean().optional().default(false)
+}).refine(data => data.dia !== undefined || data.diaIndex !== undefined, {
+    message: "Debe proporcionar 'dia' (1-7) o 'diaIndex' (0-6)",
+    path: ["dia"]
+});
+
 async function handler(req, res) {
-    try {
-        const {
-            semanaId,
-            dia,
-            diaIndex,
-            pomodoroIndex,
-            includeMultimodal,
-            useStorytellingPrompt = true,
-            useLLMJudge = false
-        } = req.body;
+    const {
+        semanaId, dia, diaIndex, pomodoroIndex,
+        includeMultimodal, useStorytellingPrompt, useLLMJudge
+    } = req.body;
 
-        // Normalizar día (soporta 'dia' directo o 'diaIndex')
-        const diaFinal = dia || (diaIndex !== undefined ? diaIndex + 1 : null);
+    // Normalización de día
+    const diaFinal = dia || (diaIndex !== undefined ? diaIndex + 1 : 1);
 
-        // Extraer userId del contexto de auth o header
-        const userId = req.authContext?.userId || req.headers['x-user-id'] || null;
+    // Extraer userId
+    const userId = req.headers['x-user-id'] || 'anonymous';
 
-        logger.info(`[API v1] Generando lección para S${semanaId}/D${diaFinal}/P${pomodoroIndex}`, {
-            userId,
-            includeMultimodal: !!includeMultimodal,
-            useStorytellingPrompt,
-            useLLMJudge
-        });
+    logger.info(`[API v1] Generando lección S${semanaId}/D${diaFinal}/P${pomodoroIndex}`, { userId });
 
-        // Delegar al servicio
-        const result = await lessonService.generateLesson({
-            semanaId: Number(semanaId),
-            dia: Number(diaFinal),
-            pomodoroIndex: Number(pomodoroIndex),
-            userId,
-            enrichWithMultimodal: !!includeMultimodal,
-            useStorytellingPrompt,
-            useLLMJudge
-        });
+    const result = await lessonService.generateLesson({
+        semanaId,
+        dia: diaFinal,
+        pomodoroIndex,
+        userId,
+        enrichWithMultimodal: includeMultimodal,
+        useStorytellingPrompt,
+        useLLMJudge
+    });
 
-        return res.status(200).json(result);
-
-    } catch (error) {
-        logger.error('[API v1] Error generando lección', error);
-        return res.status(500).json({
-            error: 'Error interno del servidor',
-            message: error.message
-        });
-    }
+    return sendSuccess(res, result);
 }
 
-// Esquema de validación
-const schema = {
-    method: 'POST',
-    required: ['semanaId', 'pomodoroIndex'],
-    types: {
-        semanaId: 'number',
-        pomodoroIndex: 'number'
-    }
-};
-
-export default withOptionalAuth(validate(schema, handler));
+// Composición: Validation -> API Wrapper -> Handler
+export default createApiHandler(withValidation(generateLessonSchema, handler));
