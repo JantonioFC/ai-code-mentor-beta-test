@@ -1,46 +1,35 @@
-name: CI Pipeline
+name: CI
 
 on:
-  pull_request:
-    branches:
-      - main
   push:
-    branches:
-      - main
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
 
 jobs:
-  # Job de validación básica (siempre corre)
-  build-validation:
-    name: 'Build Validation'
+  test:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20.x'
-          cache: 'npm'
-
-      - name: Install Dependencies
-        run: npm ci --legacy-peer-deps
-
-      - name: Build Application
-        run: npm run build
-        env:
-          # Placeholders para build (no requieren valores reales)
-          NEXT_PUBLIC_E2E_TEST_MODE: 'false'
-          NEXT_PUBLIC_GEMINI_MODEL_NAME: 'gemini-2.5-flash'
-          NEXT_PUBLIC_ENABLE_PERF_MONITOR: 'false'
-
-      - name: Build Success
-        run: echo "✅ Build validation passed! Application compiles correctly."
-
-  # Nota: Los tests E2E requieren configurar GitHub Secrets para Supabase y Gemini.
-  # Para ejecutar tests E2E localmente:
-  #   1. Configurar .env.local con tus credenciales
-  #   2. npm run dev
-  #   3. npx playwright test
+    - uses: actions/checkout@v3
+    
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run tests
+      run: npm test
+      env:
+        CI: true
+        # Providing dummy vars for sensitive envs in testing if needed, though mocking is preferred
+        GEMINI_API_KEY: "dummy-key-for-ci" 
+        DB_VERBOSE: false

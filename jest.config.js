@@ -42,14 +42,17 @@ module.exports = {
             testMatch: [
                 '**/__tests__/**/*.test.js',
                 '**/tests/prompts/**/*.test.js',
-                '**/tests/integration/**/*.test.js'
+                '**/tests/integration/**/*.test.js',
+                '**/tests/unit/**/*.test.js'
             ],
             testPathIgnorePatterns: [
                 '/node_modules/',
                 '/98_Obsolete_Archive/',
                 '/99_Archive_Temp/'
             ],
-            transform: {}
+            transform: {
+                '^.+\\.(js|jsx)$': ['babel-jest', { configFile: './.babelrc.jest.js' }]
+            }
         },
         {
             displayName: 'react',
