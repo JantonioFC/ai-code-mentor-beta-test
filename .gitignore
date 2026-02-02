@@ -88,12 +88,14 @@ data/cache.db
 data/cache.db-shm
 data/cache.db-wal
 
-# Documentación Privada de Negocio (no versionar)
+# Documentación# Private business documentation
 docs/MARKET_OPPORTUNITY.md
 docs/SEO_STRATEGY.md
 docs/THREAT_MODEL.md
 docs/BILLING_STRATEGY.md
 docs/SKILLS_ROADMAP.md
+docs/SOCIAL_CONTENT_STRATEGY.md
+docs/PAID_ADS_STRATEGY.md
 
 # Comunicación Local
 charla
