@@ -87,3 +87,6 @@ logs/
 data/cache.db
 data/cache.db-shm
 data/cache.db-wal
+
+# Comunicación Local
+charla
