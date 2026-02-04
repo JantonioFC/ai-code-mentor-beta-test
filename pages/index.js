@@ -11,6 +11,8 @@ const AuthModal = dynamic(() => import('../components/auth/AuthModal'), {
   loading: () => <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm"><div className="bg-white p-4 rounded shadow">Cargando formulario...</div></div>
 });
 
+import { Analytics } from '../lib/analytics';
+
 export default function LandingPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -28,17 +30,27 @@ export default function LandingPage() {
 
   // Redireccionar si ya está autenticado
   useEffect(() => {
+    // Analytics: Landing View
+    if (!isAuthenticated) {
+      Analytics.track('landing_viewed', {
+        referrer: document.referrer,
+        auth_status: 'guest'
+      });
+    }
+
     if (isAuthenticated) {
       router.push('/panel-de-control');
     }
   }, [isAuthenticated, router]);
 
   const handleGetStarted = () => {
+    Analytics.track('cta_clicked', { button: 'get_started' });
     if (isAuthenticated) {
       setIsLoading(true);
       router.push('/panel-de-control');
     } else {
       setShowLoginModal(true);
+      Analytics.track('auth_modal_opened', { mode: 'login' });
     }
   };
 
@@ -51,7 +63,11 @@ export default function LandingPage() {
 
       if (error) {
         alert(`Error de autenticación: ${error}`);
+        Analytics.track('login_failed', { error });
       } else {
+        Analytics.track('login_completed', { method: 'email' });
+        Analytics.identify(data.user?.id, { email: data.user?.email });
+
         setShowLoginModal(false);
         setLoginData({ email: '', password: '' });
         router.push('/panel-de-control');
@@ -88,6 +104,7 @@ export default function LandingPage() {
 
       if (error) {
         alert(`Error de registro: ${error}`);
+        Analytics.track('signup_failed', { error });
         return;
       }
 
@@ -136,6 +153,9 @@ export default function LandingPage() {
         }
       }
 
+      Analytics.track('signup_completed', { method: 'email' });
+      Analytics.identify(data.user?.id, { email: data.user?.email });
+
       alert('¡Registro exitoso! Ya puedes iniciar sesión.');
       setAuthMode('login'); // Cambiar a modo login
       setSignupData({ email: '', password: '', confirmPassword: '' });
@@ -149,12 +169,17 @@ export default function LandingPage() {
 
   const handleQuickDemo = async () => {
     setIsLoading(true);
+    Analytics.track('demo_login_started');
     try {
       const { data, error } = await signIn('demo@aicodementor.com', 'demo123');
 
       if (error) {
         alert(`Error de demo: ${error}`);
+        Analytics.track('demo_login_failed', { error });
       } else {
+        Analytics.track('demo_login_completed');
+        Analytics.identify('demo_user', { email: 'demo@aicodementor.com' });
+
         setShowLoginModal(false);
         router.push('/panel-de-control');
       }

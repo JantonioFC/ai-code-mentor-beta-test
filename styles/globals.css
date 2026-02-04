@@ -398,3 +398,53 @@ pre {
   background: rgba(240, 253, 250, 0.5);
   border: 1px solid rgba(20, 184, 166, 0.1);
 }
+
+/* ============================================
+   STITCH DESIGN SYSTEM - ROUND 3
+   Deep Space & Neon Tokens
+   ============================================ */
+
+:root {
+  /* Stitch Color Palette */
+  --stitch-bg-main: #0a0a0c; /* Deep Space */
+  --stitch-surface-glass: rgba(255, 255, 255, 0.05);
+  --stitch-border-glass: rgba(255, 255, 255, 0.1);
+  
+  --stitch-neon-blue: #00f0ff;
+  --stitch-neon-purple: #bd00ff;
+  --stitch-neon-green: #00ff9d;
+
+  /* Typography Override if needed */
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* Glass Panel Utility */
+.glass-panel {
+  background: var(--stitch-surface-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--stitch-border-glass);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  transition: all 0.3s ease;
+}
+
+.glass-panel:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 40px 0 rgba(0, 0, 0, 0.5);
+}
+
+/* Neon Text Utilities */
+.text-neon-blue {
+  color: var(--stitch-neon-blue);
+  text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+}
+
+.text-neon-purple {
+  color: var(--stitch-neon-purple);
+  text-shadow: 0 0 10px rgba(189, 0, 255, 0.5);
+}
+
+/* Radix Tab Content Animation */
+.radix-tab-content {
+  animation: fadeIn 0.4s ease-out;
+}

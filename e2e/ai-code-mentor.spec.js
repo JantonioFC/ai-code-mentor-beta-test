@@ -115,6 +115,9 @@ test.describe('🔐 AUTENTICACIÓN - Suite de Pruebas', () => {
   test('AUTH-001: Debe autenticar con acceso demo rápido', async ({ page }) => {
     console.log('🚀 [M-274] Iniciando test de autenticación...');
 
+    // Enable browser console logging
+    page.on('console', msg => console.log(`[BROWSER] ${msg.text()}`));
+
     // M-274: Inyección híbrida explícita
     // M-22.4: Migrado a authenticateDemo (estandarización M-230.9)
     await authenticateDemo(page);
@@ -126,8 +129,8 @@ test.describe('🔐 AUTENTICACIÓN - Suite de Pruebas', () => {
     // Verificar que la URL es correcta
     await expect(page).toHaveURL(/panel-de-control/, { timeout: 30000 });
 
-    // Verificar que un elemento clave del Panel sea visible
-    await expect(page.locator('h1:text("Panel de Control")')).toBeVisible({ timeout: 30000 });
+    // Verificar que un elemento clave del Panel sea visible (Updated for Stitch UI "Panel de Control 360")
+    await expect(page.locator('h1:has-text("Panel de Control")')).toBeVisible({ timeout: 30000 });
 
     // Verificar el título
     await E2EHelpers.verifyPageTitle(page, 'Panel de Control - AI Code Mentor');
@@ -219,17 +222,19 @@ test.describe('📊 PANEL DE CONTROL - Validación de Widgets', () => {
   test('PANEL-001: Debe cargar Dashboard Unificado y Sidebar de Sistema', async ({ page }) => {
     console.log('📈 Verificando Dashboard Unificado...');
 
-    // Esperar a que el componente lazy se cargue
-    const dashboardTitle = page.locator('h2:text("Dashboard Unificado Ecosistema 360")');
+    // Esperar a que el componente lazy se cargue (Ahora en Radix Tabs)
+    // Se encuentra dentro del Tab Content "unified" que es default
+    const dashboardTitle = page.locator('h2:has-text("Dashboard Unificado")');
     await expect(dashboardTitle).toBeVisible({ timeout: 15000 });
     console.log('✅ Título Dashboard Unificado encontrado');
 
-    // Verificar presencia de pestañas principales (ahora reducidas)
+    // Verificar presencia de pestañas principales (Radix Tabs Triggers)
     const tabs = ['Dashboard Unificado', 'Sandbox', 'Sistema'];
     for (const tab of tabs) {
-      await expect(page.locator(`button:has-text("${tab}")`)).toBeVisible();
+      // Radix usa role="tab", verificamos también el texto y el rol
+      await expect(page.getByRole('tab', { name: tab })).toBeVisible();
     }
-    console.log('✅ Pestañas principales verificadas');
+    console.log('✅ Pestañas principales verificadas (Radix UI)');
   });
 });
 
@@ -568,7 +573,7 @@ test.describe('🚀 SMOKE TEST - Verificación General del Sistema', () => {
       await page.waitForLoadState('networkidle', { timeout: 10000 });
 
       await expect(page).toHaveURL(/panel-de-control/, { timeout: 10000 });
-      await expect(page.locator('h1:text("Panel de Control")')).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('h1:has-text("Panel de Control")')).toBeVisible({ timeout: 10000 });
 
       await E2EHelpers.verifyPageTitle(page, 'Panel de Control - AI Code Mentor');
       results.dashboard = true;

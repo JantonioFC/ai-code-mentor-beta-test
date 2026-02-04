@@ -18,23 +18,31 @@ export default async function handler(req, res) {
         return res.status(401).json({ error: 'Invalid token' });
     }
 
-    // Fetch full user from DB if needed, or just return basic info from token
     // For now, return basic info stored in token/db
     // We can query DB for full profile if we want
     const db = require('../../../lib/db');
-    const user = db.findOne('users', { id: result.userId });
+    try {
+        console.log('[API/AUTH/USER] Querying user profile for:', result.userId);
+        const user = db.findOne('user_profiles', { id: result.userId });
 
-    if (!user) {
-        return res.status(401).json({ error: 'User not found' });
-    }
-
-    return res.status(200).json({
-        user: {
-            id: user.id,
-            email: user.email,
-            full_name: user.full_name,
-            avatar_url: user.avatar_url,
-            role: 'authenticated'
+        if (!user) {
+            console.warn('[API/AUTH/USER] User not found in DB:', result.userId);
+            return res.status(401).json({ error: 'User not found' });
         }
-    });
+
+        console.log('[API/AUTH/USER] Found:', user.email);
+
+        return res.status(200).json({
+            user: {
+                id: user.id,
+                email: user.email,
+                full_name: user.full_name,
+                avatar_url: user.avatar_url,
+                role: 'authenticated'
+            }
+        });
+    } catch (err) {
+        console.error('[API/AUTH/USER] DB Error:', err);
+        return res.status(500).json({ error: 'Database error' });
+    }
 }

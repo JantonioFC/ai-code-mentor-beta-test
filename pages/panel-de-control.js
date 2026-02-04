@@ -1,43 +1,38 @@
 /**
- * Panel de Control - Vista Principal
+ * Panel de Control - Vista Principal (Refactored Round 3)
  * 
- * Tabs incluidos:
- * - Dashboard Unificado (Ecosistema 360)
- * - Sandbox (Experimentación)
- * - Sistema (Monitor de Salud Técnica)
- * 
- * NOTA: Progreso y Logros migrados a /analiticas (Fase 3 UI_REARCHITECTURE_PLAN)
+ * Uses Radix UI Primitives for accessible tabs.
+ * Stitch Design System: Glassmorphism & Neon Accents.
  */
 
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense } from 'react';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
 import PrivateLayout from '../components/layout/PrivateLayout';
+import {
+  Root as TabsRoot,
+  List as TabsList,
+  Trigger as TabsTrigger,
+  Content as TabsContent
+} from '@radix-ui/react-tabs';
 
-// LAZY LOADING de componentes
+// LAZY LOADING
 const EnhancedUnifiedDashboard = lazy(() => import('../components/ProjectTracking').then(module => ({ default: module.EnhancedUnifiedDashboard })));
 const SandboxWidget = lazy(() => import('../components/Sandbox/SandboxWidget'));
 const SystemTestWidget = lazy(() => import('../components/dashboard/SystemTestWidget'));
 
-// Loading fallback component
 function WidgetSkeleton({ title }) {
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <div className="animate-pulse">
-        <div className="h-6 bg-gray-200 rounded w-64 mb-6">{title && <span className="opacity-0">{title}</span>}</div>
-        <div className="space-y-4">
-          <div className="h-4 bg-gray-200 rounded w-full"></div>
-          <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-          <div className="h-4 bg-gray-200 rounded w-4/6"></div>
-          <div className="h-32 bg-gray-100 rounded-lg mt-4"></div>
-        </div>
+    <div className="glass-panel rounded-lg p-6 animate-pulse">
+      <div className="h-6 bg-white/10 rounded w-64 mb-6">{title && <span className="opacity-0">{title}</span>}</div>
+      <div className="space-y-4">
+        <div className="h-32 bg-white/5 rounded-lg mt-4"></div>
       </div>
     </div>
   );
 }
 
 export default function PanelDeControl() {
-  const [activeTab, setActiveTab] = useState('unified');
-
+  console.log('[PanelDeControl] Rendering...');
   const tabs = [
     { id: 'unified', label: 'Dashboard Unificado', icon: '📈' },
     { id: 'sandbox', label: 'Sandbox', icon: '🧪' },
@@ -50,77 +45,74 @@ export default function PanelDeControl() {
         title="Panel de Control - AI Code Mentor"
         description="Dashboard principal del ecosistema educativo Ecosistema 360"
       >
-        <div className="space-y-6">
-          {/* Header */}
-          <div className="header-corporate rounded-2xl p-6">
-            <h1 className="text-3xl font-bold text-gray-800 text-center">
-              Panel de Control
+        <div className="space-y-8">
+
+          {/* Header with Stitch Gradient */}
+          <div className="header-corporate rounded-2xl p-8 border border-teal-500/20 shadow-lg relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-[--stitch-neon-blue] to-[--stitch-neon-purple] opacity-5"></div>
+            <h1 className="text-3xl font-bold text-gray-800 text-center relative z-10">
+              Panel de Control <span className="text-teal-600">360</span>
             </h1>
           </div>
 
-          {/* Tabs Navigation */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-2">
-            <div className="flex flex-wrap gap-2">
+          {/* Radix Tabs Root - Named Import Usage */}
+          <TabsRoot defaultValue="unified" className="flex flex-col gap-6">
+
+            {/* Tab List (Glass Panel) */}
+            <TabsList className="glass-panel p-2 rounded-xl flex gap-3 overflow-x-auto" aria-label="Secciones del Panel">
               {tabs.map((tab) => (
-                <button
+                <TabsTrigger
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex-1 min-w-[150px] px-4 py-3 rounded-lg font-medium transition-all ${activeTab === tab.id
-                    ? 'bg-blue-600 text-white shadow-md'
-                    : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-                    }`}
+                  value={tab.id}
+                  className="
+                    flex-1 min-w-[150px] px-4 py-3 rounded-lg font-medium transition-all duration-300
+                    text-gray-600 hover:bg-white/10 hover:text-teal-600
+                    data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-teal-600 
+                    data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-[1.02]
+                    focus:outline-none focus:ring-2 focus:ring-teal-400
+                  "
                 >
                   <span className="mr-2">{tab.icon}</span>
                   {tab.label}
-                </button>
+                </TabsTrigger>
               ))}
-            </div>
-          </div>
+            </TabsList>
 
-          {/* Tab Content with Lazy Loading */}
-          <div className="min-h-[400px]">
-            {/* UNIFIED DASHBOARD TAB */}
-            {activeTab === 'unified' && (
-              <Suspense fallback={<WidgetSkeleton title="Cargando Dashboard Unificado..." />}>
-                <div>
-                  <div className="mb-4">
-                    <h2 className="text-xl font-semibold text-gray-800">
-                      📈 Dashboard Unificado Ecosistema 360
-                    </h2>
+            {/* Tab Contents (Lazy Loaded + Accessible) */}
+            <div className="min-h-[400px]">
+
+              <TabsContent value="unified" className="radix-tab-content focus:outline-none focus:ring-2 focus:ring-teal-500/50 rounded-xl">
+                <Suspense fallback={<WidgetSkeleton title="Cargando Dashboard..." />}>
+                  <div className="mb-4 flex items-center gap-2">
+                    <h2 className="text-xl font-semibold text-gray-800">📈 Dashboard Unificado</h2>
+                    <span className="text-xs px-2 py-1 rounded-full bg-teal-100 text-teal-700 border border-teal-200">En vivo</span>
                   </div>
                   <EnhancedUnifiedDashboard />
-                </div>
-              </Suspense>
-            )}
+                </Suspense>
+              </TabsContent>
 
-            {/* SANDBOX TAB */}
-            {activeTab === 'sandbox' && (
-              <Suspense fallback={<WidgetSkeleton title="Cargando Herramientas de Experimentación..." />}>
-                <div>
+              <TabsContent value="sandbox" className="radix-tab-content focus:outline-none focus:ring-2 focus:ring-purple-500/50 rounded-xl">
+                <Suspense fallback={<WidgetSkeleton title="Cargando Sandbox..." />}>
                   <div className="mb-4">
-                    <h2 className="text-xl font-semibold text-gray-800">
-                      🧪 Herramientas de Experimentación
-                    </h2>
+                    <h2 className="text-xl font-semibold text-gray-800">🧪 Herramientas de Experimentación</h2>
                   </div>
                   <SandboxWidget />
-                </div>
-              </Suspense>
-            )}
+                </Suspense>
+              </TabsContent>
 
-            {/* SYSTEM TAB */}
-            {activeTab === 'system' && (
-              <Suspense fallback={<WidgetSkeleton title="Cargando Monitor de Salud Técnica..." />}>
-                <div>
+              <TabsContent value="system" className="radix-tab-content focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded-xl">
+                <Suspense fallback={<WidgetSkeleton title="Cargando Sistema..." />}>
                   <div className="mb-4">
-                    <h2 className="text-xl font-semibold text-gray-800">
-                      🔧 Monitor de Salud Técnica
-                    </h2>
+                    <h2 className="text-xl font-semibold text-gray-800">🔧 Monitor de Salud Técnica</h2>
                   </div>
                   <SystemTestWidget />
-                </div>
-              </Suspense>
-            )}
-          </div>
+                </Suspense>
+              </TabsContent>
+
+            </div>
+
+          </TabsRoot>
+
         </div>
       </PrivateLayout>
     </ProtectedRoute>

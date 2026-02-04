@@ -1,19 +1,10 @@
 /**
  * API TRACKING CONTEXT - Sistema de Monitoreo de Llamadas Gemini
  * MISIÓN CRÍTICA: Control de Costos durante Testing Intensivo
- * 
- * Este context proporciona tracking en tiempo real de:
- * - Llamadas API realizadas vs límite diario
- * - Tiempo restante hasta el reseteo (medianoche Pacific Time)
- * - Estado de alerta cuando se acerca al límite
- * - Historial de llamadas por sesión
- * 
- * @author Mentor Coder
- * @version 1.0.0 - Implementación Inicial
- * @fecha 2025-09-27
  */
 
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import { useAuth } from '../lib/auth/useAuth'; // Standard import
 
 // Configuración de límites por modelo Gemini
 const GEMINI_LIMITS = {
@@ -38,7 +29,7 @@ const GEMINI_LIMITS = {
 const initialState = {
   // Contadores principales
   callsToday: 0,
-  dailyLimit: 1500, // Por defecto gemini-2.5-flash
+  dailyLimit: 1500,
   remainingCalls: 1500,
 
   // Configuración actual
@@ -50,18 +41,12 @@ const initialState = {
   callHistory: [],
 
   // Estados de alerta
-  alertLevel: 'safe', // 'safe', 'warning', 'critical', 'exhausted'
+  alertLevel: 'safe',
   showWarning: false,
 
   // Tiempo y reseteo
   nextResetTime: null,
   timeUntilReset: null,
-
-  // Estado del sistema
-  isTracking: true,
-  lastCallTime: null,
-
-  // Métricas adicionales
   averageCallsPerHour: 0,
   estimatedExhaustionTime: null
 };
@@ -80,22 +65,24 @@ const API_TRACKING_ACTIONS = {
 
 // Reducer para gestionar el estado
 function apiTrackingReducer(state, action) {
+  if (!state) return initialState; // Defensive Coding
+
   switch (action.type) {
     case API_TRACKING_ACTIONS.INITIALIZE:
       return {
         ...state,
         currentModel: action.model,
         dailyLimit: GEMINI_LIMITS[action.model]?.dailyLimit || 1500,
-        remainingCalls: (GEMINI_LIMITS[action.model]?.dailyLimit || 1500) - state.callsToday
+        remainingCalls: (GEMINI_LIMITS[action.model]?.dailyLimit || 1500) - (state.callsToday || 0)
       };
 
     case API_TRACKING_ACTIONS.RECORD_API_CALL:
-      const newCallsToday = state.callsToday + 1;
-      const newSessionCalls = state.sessionCalls + 1;
-      const newRemainingCalls = state.dailyLimit - newCallsToday;
+      const newCallsToday = (state.callsToday || 0) + 1;
+      const newSessionCalls = (state.sessionCalls || 0) + 1; // Safely access sessionCalls
+      const newRemainingCalls = (state.dailyLimit || 1500) - newCallsToday;
 
       const newCallHistory = [
-        ...state.callHistory.slice(-49), // Mantener últimas 50 llamadas
+        ...(state.callHistory || []).slice(-49),
         {
           timestamp: new Date().toISOString(),
           model: state.currentModel,
@@ -105,7 +92,7 @@ function apiTrackingReducer(state, action) {
         }
       ];
 
-      const newAlertLevel = calculateAlertLevel(newRemainingCalls, state.dailyLimit);
+      const newAlertLevel = calculateAlertLevel(newRemainingCalls, state.dailyLimit || 1500);
 
       return {
         ...state,
@@ -124,7 +111,7 @@ function apiTrackingReducer(state, action) {
         ...state,
         currentModel: action.model,
         dailyLimit: newLimit,
-        remainingCalls: newLimit - state.callsToday
+        remainingCalls: newLimit - (state.callsToday || 0)
       };
 
     case API_TRACKING_ACTIONS.RESET_DAILY_COUNTER:
@@ -135,7 +122,7 @@ function apiTrackingReducer(state, action) {
         lastResetDate: new Date().toISOString(),
         alertLevel: 'safe',
         showWarning: false,
-        callHistory: state.callHistory.filter(call => {
+        callHistory: (state.callHistory || []).filter(call => {
           const callDate = new Date(call.timestamp);
           const resetDate = new Date();
           return callDate.toDateString() === resetDate.toDateString();
@@ -165,10 +152,13 @@ function apiTrackingReducer(state, action) {
       };
 
     case API_TRACKING_ACTIONS.LOAD_PERSISTED_DATA:
+      // Robust payload handling
+      const safeData = action.data || {};
       return {
         ...state,
-        ...action.data,
-        sessionCalls: 0 // Reset session calls al cargar
+        callsToday: typeof safeData.callsToday === 'number' ? safeData.callsToday : (state.callsToday || 0),
+        callHistory: Array.isArray(safeData.callHistory) ? safeData.callHistory : (state.callHistory || []),
+        sessionCalls: 0 // Reset session on load
       };
 
     default:
@@ -178,6 +168,7 @@ function apiTrackingReducer(state, action) {
 
 // Funciones auxiliares
 function calculateAlertLevel(remainingCalls, dailyLimit) {
+  if (!dailyLimit) return 'safe';
   const usagePercentage = ((dailyLimit - remainingCalls) / dailyLimit) * 100;
 
   if (remainingCalls <= 0) return 'exhausted';
@@ -188,29 +179,19 @@ function calculateAlertLevel(remainingCalls, dailyLimit) {
 
 function calculateNextResetTime() {
   const now = new Date();
-
-  // Calcular medianoche local del próximo día (00:00 hora local)
   const nextReset = new Date(now);
   nextReset.setDate(nextReset.getDate() + 1);
   nextReset.setHours(0, 0, 0, 0);
-
   return nextReset;
 }
 
 function formatTimeUntilReset(resetTime) {
   const now = new Date();
   const diff = resetTime - now;
-
   if (diff <= 0) return "Reseteando...";
-
   const hours = Math.floor(diff / (1000 * 60 * 60));
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-  if (hours > 0) {
-    return `${hours}h ${minutes}m`;
-  } else {
-    return `${minutes}m`;
-  }
+  return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
 }
 
 // Context
@@ -220,64 +201,58 @@ const APITrackingContext = createContext();
 export function APITrackingProvider({ children }) {
   const [state, dispatch] = useReducer(apiTrackingReducer, initialState);
 
-  // Inicializar con modelo de las variables de entorno
+  // Safe Auth Hook Usage
+  let session = null;
+  try {
+    const auth = useAuth();
+    session = auth?.session;
+  } catch (e) {
+    // Ignore if blocked by strict checks, though it should be fine inside _app
+  }
+
+  // Fetch initial stats
   useEffect(() => {
-    const initializeTracking = () => {
-      // Cargar datos persistidos con manejo defensivo
+    let mounted = true;
+
+    const fetchStats = async () => {
       try {
-        const savedData = localStorage.getItem('api-tracking-data');
-        if (savedData && savedData.trim() !== '') {
-          // Manejo defensivo: validar formato antes de parsear
-          let parsed;
-          try {
-            parsed = JSON.parse(savedData);
-          } catch (parseError) {
-            console.warn('[API-TRACKING] Datos corruptos en localStorage, reseteando:', parseError.message);
-            localStorage.removeItem('api-tracking-data');
-            dispatch({ type: API_TRACKING_ACTIONS.RESET_DAILY_COUNTER });
-            return;
-          }
-
-          // Verificar si necesita reset diario (basado en fecha local)
-          const lastReset = new Date(parsed.lastResetDate || 0);
-          const now = new Date();
-
-          // Comparar solo la fecha local (ignorando hora)
-          if (lastReset.toLocaleDateString() !== now.toLocaleDateString()) {
-            // Necesita reset
-            dispatch({ type: API_TRACKING_ACTIONS.RESET_DAILY_COUNTER });
-          } else {
-            // Cargar datos existentes
-            dispatch({ type: API_TRACKING_ACTIONS.LOAD_PERSISTED_DATA, data: parsed });
-          }
+        const res = await fetch('/api/usage/stats');
+        if (res.ok && mounted) {
+          const data = await res.json();
+          dispatch({
+            type: API_TRACKING_ACTIONS.LOAD_PERSISTED_DATA,
+            data: {
+              callsToday: data.callsToday,
+              callHistory: data.history
+            }
+          });
         }
-      } catch (error) {
-        console.warn('[API-TRACKING] Error cargando datos persistidos:', error);
+      } catch (err) {
+        console.error('Failed to load usage stats:', err);
       }
-
-      // Detectar modelo actual desde variables de entorno (cliente side)
-      const currentModel = process.env.NEXT_PUBLIC_GEMINI_MODEL_NAME || 'gemini-2.5-flash';
-      dispatch({ type: API_TRACKING_ACTIONS.INITIALIZE, model: currentModel });
     };
 
-    initializeTracking();
+    fetchStats();
+    return () => { mounted = false; };
   }, []);
 
-  // Actualizar métricas de tiempo cada minuto
+  // Detect Limit Changes
+  useEffect(() => {
+    const currentModel = process.env.NEXT_PUBLIC_GEMINI_MODEL_NAME || 'gemini-2.5-flash';
+    dispatch({ type: API_TRACKING_ACTIONS.INITIALIZE, model: currentModel });
+  }, []);
+
+  // Update time metrics
   useEffect(() => {
     const updateTimeMetrics = () => {
       const nextResetTime = calculateNextResetTime();
-      const timeUntilReset = formatTimeUntilReset(nextResetTime);
-
-      // Calcular promedio de llamadas por hora (últimas 24h)
       const now = new Date();
-      const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-      const recentCalls = state.callHistory.filter(call =>
-        new Date(call.timestamp) > oneDayAgo
-      );
-      const averageCallsPerHour = recentCalls.length / 24;
 
-      // Estimar tiempo de agotamiento
+      const history = state.callHistory || [];
+      const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const recentCalls = history.filter(call => new Date(call.timestamp) > oneDayAgo);
+      const averageCallsPerHour = recentCalls.length > 0 ? (recentCalls.length / 24) : 0;
+
       let estimatedExhaustionTime = null;
       if (averageCallsPerHour > 0 && state.remainingCalls > 0) {
         const hoursToExhaustion = state.remainingCalls / averageCallsPerHour;
@@ -287,71 +262,53 @@ export function APITrackingProvider({ children }) {
       dispatch({
         type: API_TRACKING_ACTIONS.UPDATE_TIME_METRICS,
         nextResetTime: nextResetTime.toISOString(),
-        timeUntilReset,
+        timeUntilReset: formatTimeUntilReset(nextResetTime),
         averageCallsPerHour: Math.round(averageCallsPerHour * 10) / 10,
         estimatedExhaustionTime: estimatedExhaustionTime?.toISOString() || null
       });
     };
 
     updateTimeMetrics();
-    const interval = setInterval(updateTimeMetrics, 60000); // Cada minuto
-
+    const interval = setInterval(updateTimeMetrics, 60000);
     return () => clearInterval(interval);
   }, [state.callHistory, state.remainingCalls]);
 
-  // Persistir datos en localStorage
-  useEffect(() => {
-    try {
-      const dataToSave = {
-        callsToday: state.callsToday,
-        lastResetDate: state.lastResetDate,
-        callHistory: state.callHistory,
-        currentModel: state.currentModel
-      };
-      localStorage.setItem('api-tracking-data', JSON.stringify(dataToSave));
-    } catch (error) {
-      console.warn('[API-TRACKING] Error guardando datos:', error);
-    }
-  }, [state.callsToday, state.lastResetDate, state.callHistory, state.currentModel]);
-
-  // Métodos del context
-  const recordAPICall = (operation = 'generateIRP', success = true, responseTime = null) => {
+  const recordAPICall = async (operation = 'generateIRP', success = true, responseTime = null) => {
     dispatch({
       type: API_TRACKING_ACTIONS.RECORD_API_CALL,
       operation,
       success,
       responseTime
     });
-  };
 
-  const updateModel = (newModel) => {
-    dispatch({ type: API_TRACKING_ACTIONS.UPDATE_MODEL, model: newModel });
-  };
-
-  const dismissWarning = () => {
-    dispatch({ type: API_TRACKING_ACTIONS.DISMISS_WARNING });
-  };
-
-  const resetDailyCounter = () => {
-    dispatch({ type: API_TRACKING_ACTIONS.RESET_DAILY_COUNTER });
+    try {
+      await fetch('/api/usage/record', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: state.currentModel,
+          operation,
+          success,
+          responseTime
+        })
+      });
+    } catch (err) {
+      console.error('Failed to sync API call:', err);
+    }
   };
 
   const contextValue = {
-    // Estado
     ...state,
-
-    // Métodos
     recordAPICall,
-    updateModel,
-    dismissWarning,
-    resetDailyCounter,
-
-    // Utilidades
-    getUsagePercentage: () => ((state.dailyLimit - state.remainingCalls) / state.dailyLimit) * 100,
-    isNearLimit: () => state.remainingCalls <= Math.max(10, state.dailyLimit * 0.1),
+    updateModel: (model) => dispatch({ type: API_TRACKING_ACTIONS.UPDATE_MODEL, model }),
+    dismissWarning: () => dispatch({ type: API_TRACKING_ACTIONS.DISMISS_WARNING }),
+    resetDailyCounter: () => dispatch({ type: API_TRACKING_ACTIONS.RESET_DAILY_COUNTER }),
+    getUsagePercentage: () => {
+      const limit = state.dailyLimit || 1500;
+      return ((limit - state.remainingCalls) / limit) * 100;
+    },
+    isNearLimit: () => state.remainingCalls <= Math.max(10, (state.dailyLimit || 1500) * 0.1),
     canMakeCall: () => state.remainingCalls > 0,
-
-    // Configuración del modelo actual
     currentModelConfig: GEMINI_LIMITS[state.currentModel] || GEMINI_LIMITS['gemini-2.5-flash']
   };
 
@@ -365,11 +322,9 @@ export function APITrackingProvider({ children }) {
 // Hook personalizado
 export function useAPITracking() {
   const context = useContext(APITrackingContext);
-
   if (!context) {
     throw new Error('useAPITracking debe ser usado dentro de un APITrackingProvider');
   }
-
   return context;
 }
 

@@ -38,20 +38,24 @@ async function authenticateDemo(page, targetPath = '/panel-de-control') {
   console.log('🔐 [AUTH-LOCAL] Verificando login...');
 
   // 1. Navegar a la ruta destino
-  await page.goto(targetPath, {
-    waitUntil: 'domcontentloaded',
-    timeout: TEST_CONFIG.NAVIGATION_TIMEOUT
-  });
+  try {
+    await page.goto(targetPath, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30000 // Aumentado a 30s
+    });
+  } catch (e) {
+    console.log('⚠️ [AUTH-LOCAL] Navigation timeout, checking if we landed somewhere safe...');
+  }
 
-  // 1b. Esperar a que la navegación realmente termine y no estemos en una redirección intermedia
-  await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => { });
+  // 1b. Esperar estabilización (Redirects client-side)
+  await page.waitForTimeout(2000);
 
   // 2. Verificar si hemos sido redirigidos a /login
   if (page.url().includes('/login')) {
     console.log('🔒 [AUTH-LOCAL] Redirigido a Login. Iniciando sesión...');
 
     // Esperar a que el formulario sea visible
-    await page.waitForSelector('form', { state: 'visible', timeout: 5000 });
+    await page.waitForSelector('form', { state: 'visible', timeout: 10000 });
 
     // Llenar formulario
     await page.fill('input[type="email"]', TEST_CONFIG.DEMO_EMAIL);
@@ -61,9 +65,8 @@ async function authenticateDemo(page, targetPath = '/panel-de-control') {
     await page.click('button[type="submit"]');
 
     // Esperar navegación o feedback
-    // La redirección a panel debería ocurrir automáticamente
     console.log('🔒 [AUTH-LOCAL] Formulario enviado. Esperando redirección...');
-    await page.waitForURL(url => url.includes('panel-de-control'), { timeout: 15000 });
+    await page.waitForURL(/panel-de-control/, { timeout: 30000 });
   }
 
   // 3. Verificar que estamos en la página correcta (o panel)

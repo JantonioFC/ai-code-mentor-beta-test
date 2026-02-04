@@ -1,7 +1,13 @@
 // next.config.cjs
-const withBundleAnalyzer = require('@next/bundle-analyzer')({
-  enabled: process.env.ANALYZE === 'true',
-});
+// next.config.cjs
+let withBundleAnalyzer = (config) => config;
+try {
+  withBundleAnalyzer = require('@next/bundle-analyzer')({
+    enabled: process.env.ANALYZE === 'true',
+  });
+} catch (e) {
+  console.warn('⚠️ @next/bundle-analyzer not installed, skipping analysis...');
+}
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -14,7 +20,11 @@ const nextConfig = {
   },
 
   // Performance: Enable compression
+  // Performance: Enable compression
   compress: true,
+
+  // Docker Optimization
+  output: 'standalone',
 
   env: {
     // Se preserva tu configuración existente para la API Key.

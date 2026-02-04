@@ -1,8 +1,8 @@
 /**
  * SCRIPT: CREATE DEMO USER FOR E2E TESTS (LOCAL SQLITE)
  * 
- * Purpose: Register demo@aicodementor.com with password demo123
- * directly in local SQLite database.
+ * Purpose: Register demo@aicodementor.com
+ * STRATEGY: DESTROY AND RECREATE (Clean Slate).
  */
 
 const db = require('../lib/db');
@@ -14,40 +14,49 @@ const DEMO_PASSWORD = 'demo123';
 const DEMO_NAME = 'Usuario Demo';
 
 async function createDemoUser() {
-  console.log('🚀 Creating Demo User...');
+  console.log('🚀 Creating Demo User (Clean Slate)...');
 
   try {
-    // 1. Check if user exists
-    const existingUser = db.findOne('users', { email: DEMO_EMAIL });
+    // 1. DELETE EXISTING (Cleanup Mismatches) uses raw SQL via db.run
+    console.log('🧹 Cleaning up old data...');
 
-    if (existingUser) {
-      console.log('✅ Demo user already exists.');
-      // Optional: Verify password? Overwrite? 
-      // For now just assume it's good or update password.
-      const match = await bcrypt.compare(DEMO_PASSWORD, existingUser.password_hash);
-      if (!match) {
-        console.log('⚠️ Password mismatch. Updating password...');
-        const hashedPassword = await bcrypt.hash(DEMO_PASSWORD, 10);
-        db.update('users', { password_hash: hashedPassword }, { email: DEMO_EMAIL });
-        console.log('✅ Password updated.');
-      }
-      return;
+    // SQLite doesn't support cascading deletes by default unless enabled, so we delete from both.
+    // Order matters if foreign keys are enforced, but we'll try profile first.
+    try {
+      db.run('DELETE FROM user_profiles WHERE email = ?', [DEMO_EMAIL]);
+      db.run('DELETE FROM users WHERE email = ?', [DEMO_EMAIL]);
+      console.log('✅ Old data removed.');
+    } catch (e) {
+      console.warn('⚠️ Warning during cleanup:', e.message);
     }
 
-    // 2. Create user
+    // 2. Create user (Fresh)
     const hashedPassword = await bcrypt.hash(DEMO_PASSWORD, 10);
     const userId = uuidv4();
 
-    db.insert('users', {
-      id: userId,
-      email: DEMO_EMAIL,
-      password_hash: hashedPassword,
-      full_name: DEMO_NAME,
-      avatar_url: '',
-      created_at: new Date().toISOString()
-    });
+    console.log('🆕 Creating new user...');
+    db.transaction(() => {
+      // User Auth
+      db.insert('users', {
+        id: userId,
+        email: DEMO_EMAIL,
+        password_hash: hashedPassword,
+        full_name: DEMO_NAME,
+        avatar_url: '',
+        created_at: new Date().toISOString()
+      });
 
-    console.log(`✅ User created! ID: ${userId}`);
+      // User Profile (REQUIRED by /api/auth/user)
+      db.insert('user_profiles', {
+        id: userId,
+        email: DEMO_EMAIL,
+        display_name: DEMO_NAME,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+    })();
+
+    console.log(`✅ User and Profile created! ID: ${userId}`);
 
   } catch (err) {
     console.error('❌ Error creating demo user:', err);
