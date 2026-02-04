@@ -1,4 +1,5 @@
 import db from '../../../lib/db';
+import rateLimit from '../../../lib/rate-limit';
 // import { getSession } from '../../../lib/auth/session'; // Removed: Legacy
 
 /**
@@ -27,6 +28,13 @@ export default async function handler(req, res) {
     // This endpoint is for client-side logic that might need to sync or report specific events.
 
     // Let's implement generic recording:
+    // 1. Rate Limit Check (API Profile)
+    try {
+        await rateLimit(req, res, 'api');
+    } catch (e) {
+        return; // Already handled
+    }
+
     const user = await getUserFromRequest(req);
 
     if (!user) {
@@ -41,7 +49,7 @@ export default async function handler(req, res) {
 
     try {
         const result = db.insert('api_usage_logs', {
-            user_id: user.id,
+            user_id: user.userId,
             model,
             operation: operation || 'unknown',
             success: success ? 1 : 0,

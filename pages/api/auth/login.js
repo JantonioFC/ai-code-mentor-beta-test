@@ -5,7 +5,7 @@ import rateLimit from '../../../lib/rate-limit'; // Security: Rate Limiting
 export default async function handler(req, res) {
     // 1. Rate Limiting Check
     try {
-        await rateLimit(req, res);
+        await rateLimit(req, res, 'auth');
     } catch (e) {
         return; // Response already handled by rateLimit
     }
