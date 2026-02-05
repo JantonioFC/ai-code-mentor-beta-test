@@ -32,7 +32,8 @@ async function createDemoUser() {
 
     // 2. Create user (Fresh)
     const hashedPassword = await bcrypt.hash(DEMO_PASSWORD, 10);
-    const userId = uuidv4();
+    //  Use consistent UUID for E2E testing
+    const userId = '00000000-0000-0000-0000-000000000001';
 
     console.log('🆕 Creating new user...');
     db.transaction(() => {

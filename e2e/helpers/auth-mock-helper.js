@@ -4,6 +4,11 @@
  * Misión 219.0 - Mock de Autenticación
  */
 
+const jwt = require('jsonwebtoken');
+
+// Use same secret as backend for token validation
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-safe-for-local-only';
+
 /**
  * Mock de sesión autenticada de Supabase
  * Simula una sesión válida en localStorage para que useAuth detecte usuario autenticado
@@ -16,11 +21,25 @@
  */
 async function mockAuthenticatedSession(page, options = {}) {
   const {
-    email = 'test@example.com',
-    userId = 'test-user-123',
-    accessToken = 'mock-access-token-' + Date.now(),
-    refreshToken = 'mock-refresh-token-' + Date.now()
+    email = 'demo@aicodementor.com',
+    // Use consistent UUID for demo user (matches create-demo-user.js)
+    userId = '00000000-0000-0000-0000-000000000001'
   } = options;
+
+  // Generate VALID JWT token using same format as lib/auth-local.js:generateToken()
+  const accessToken = jwt.sign(
+    {
+      sub: userId,        // Use 'sub' claim (standard JWT, used by backend)
+      email,
+      aud: 'authenticated',
+      role: 'authenticated',
+      v: 1                // Token version (for revocation system)
+    },
+    JWT_SECRET,
+    { expiresIn: '1h' }
+  );
+
+  const refreshToken = 'mock-refresh-token-' + Date.now();
 
   // Mock de sesión de Supabase que se guarda en localStorage
   const mockSession = {
@@ -53,19 +72,19 @@ async function mockAuthenticatedSession(page, options = {}) {
   await page.addInitScript((sessionData) => {
     // MISIÓN 219.0 - Activar flag de test para bypass de ProtectedRoute
     window.PLAYWRIGHT_TEST = true;
-    
+
     // Supabase guarda la sesión en localStorage con una key específica
     // El formato es: sb-{project-ref}-auth-token
     // Como no conocemos el project-ref exacto, usamos un patrón genérico
-    
+
     const storageKey = 'sb-mock-project-auth-token';
-    
+
     // Guardar en localStorage
     localStorage.setItem(storageKey, JSON.stringify(sessionData));
-    
+
     // También guardar en el formato que Supabase client espera
     localStorage.setItem('supabase.auth.token', JSON.stringify(sessionData));
-    
+
     console.log('🔓 [TEST] Mock de autenticación inyectado:', sessionData.user.email);
     console.log('🧪 [TEST] Flag PLAYWRIGHT_TEST activada para bypass de ProtectedRoute');
   }, mockSession);
@@ -107,6 +126,16 @@ async function mockAuthenticatedSession(page, options = {}) {
     });
   });
 
+  // Inject cookie for middleware/SSR
+  console.log(`🍪 [TEST] Injecting cookie: ai-code-mentor-auth`);
+  await page.context().addCookies([{
+    name: 'ai-code-mentor-auth',
+    value: accessToken, // Can use same token as localStorage for mock
+    domain: 'localhost',
+    path: '/',
+    expires: Date.now() / 1000 + 3600
+  }]);
+
   console.log('✅ [TEST] Mock de autenticación configurado para:', email);
 }
 
@@ -121,7 +150,7 @@ async function mockUnauthenticatedSession(page) {
     // Limpiar cualquier dato de sesión
     localStorage.clear();
     sessionStorage.clear();
-    
+
     console.log('🔒 [TEST] Mock de NO autenticación inyectado');
   });
 
@@ -151,13 +180,13 @@ async function mockUnauthenticatedSession(page) {
 async function setupAuthenticatedPage(page, url, authOptions = {}) {
   // Configurar mock de autenticación
   await mockAuthenticatedSession(page, authOptions);
-  
+
   // Navegar a la página
   await page.goto(url);
-  
+
   // Esperar un poco para que el AuthProvider se inicialice
   await page.waitForTimeout(1000);
-  
+
   console.log(`✅ [TEST] Página cargada con autenticación: ${url}`);
 }
 

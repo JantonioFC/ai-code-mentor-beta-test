@@ -4,18 +4,20 @@
  */
 
 const { test, expect } = require('@playwright/test');
-const { setupAuthenticatedPage } = require('./helpers/auth-mock-helper');
+const { authenticateDemo } = require('./helpers/authHelper');
 
-test('DIAGNOSTIC - Capturar HTML de portfolio con mock', async ({ page }) => {
+test('DIAGNOSTIC - Capturar HTML de portfolio con real auth', async ({ page }) => {
   const url = 'http://localhost:3000/portfolio';
 
   console.log('\n🔍 === INICIO DIAGNÓSTICO ===\n');
 
-  // Setup con autenticación mockeada (igual que setupPortfolioTest)
-  await setupAuthenticatedPage(page, url);
+  // Use proven authenticateDemo() instead of mock cookies (Option B)
+  // This approach is stable and used successfully in other portfolio tests
+  await authenticateDemo(page, url);
 
-  // Esperar un poco para que cargue lo que pueda cargar
-  await page.waitForTimeout(3000);
+  // Navigate to target page after authentication
+  await page.goto(url);
+  await page.waitForLoadState('networkidle');
 
   // Capturar información de debug
   const currentUrl = page.url();
