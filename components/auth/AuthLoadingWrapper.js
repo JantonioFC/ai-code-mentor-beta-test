@@ -1,35 +1,54 @@
 /**
  * AuthLoadingWrapper - Wrapper de Carga de Autenticación
  * 
- * @description Componente intermedio que verifica el estado de autenticación
+ * @description Componente cliente-only que verifica el estado de autenticación
  *              y muestra el LoadingScreen mientras la sesión está siendo validada.
- *              Este componente es crítico para prevenir race conditions.
+ *              
+ * ARQUITECTURA (FIX HYDRATION):
+ * - Solo renderiza contenido DESPUÉS de montar en cliente
+ * - Evita hydration mismatch al no renderizar nada diferente en servidor
+ * - Usa pattern de "suppressHydrationWarning" + client-only rendering
  * 
  * @author Mentor Coder
- * @version 1.0.0
- * @created 2025-10-14
+ * @version 2.1.0 (Hydration Fix)
  * @mission 221 - Eliminación de Race Condition en Autenticación
- * 
- * ARQUITECTURA:
- * - Debe estar DENTRO de <AuthProvider> para acceder a useAuth()
- * - Muestra <LoadingScreen> cuando authState === 'loading'
- * - Renderiza children solo cuando authState está resuelto
  */
+'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../lib/auth/useAuth';
 import LoadingScreen from './LoadingScreen';
 
 export default function AuthLoadingWrapper({ children }) {
-  const { authState, loading } = useAuth();
+  const { authState, loading, user } = useAuth();
+  const [hasMounted, setHasMounted] = useState(false);
 
-  // MISIÓN 221: Mostrar LoadingScreen mientras se verifica la sesión
-  if (authState === 'loading' || loading) {
-    console.log('🔄 [AUTH-WRAPPER] Mostrando LoadingScreen - authState:', authState);
+  // CRITICAL: Solo después de montar en cliente
+  useEffect(() => {
+    setHasMounted(true);
+    console.log('🏗️ [AUTH-WRAPPER] Mounted on client');
+  }, []);
+
+  // HYDRATION FIX: Durante SSR y antes de montar, renderizar skeleton consistente
+  // Esto evita el mismatch porque servidor y cliente inicial renderizan lo mismo
+  if (!hasMounted) {
+    return (
+      <div
+        className="min-h-screen bg-gradient-to-br from-indigo-900 to-purple-900"
+        suppressHydrationWarning
+      />
+    );
+  }
+
+  // CLIENTE: Ahora podemos usar authState de forma segura
+  const isActuallyLoading = authState === 'loading' || loading;
+
+  if (isActuallyLoading) {
+    console.log('🔄 [AUTH-WRAPPER] [CLIENT] Loading - authState:', authState);
     return <LoadingScreen message="Verificando sesión..." />;
   }
 
-  // MISIÓN 221: Estado resuelto - permitir renderizado de la aplicación
-  console.log('✅ [AUTH-WRAPPER] Estado resuelto - authState:', authState);
+  // Estado resuelto - permitir renderizado de la aplicación
+  console.log('✅ [AUTH-WRAPPER] Unlocked - authState:', authState, 'user:', user?.email);
   return <>{children}</>;
 }

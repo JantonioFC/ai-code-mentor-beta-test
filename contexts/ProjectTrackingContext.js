@@ -1,6 +1,6 @@
 // contexts/ProjectTrackingContext.js
 // MVP Context for Project Tracking - Created to resolve compilation errors
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 // Create the Project Tracking context
 const ProjectTrackingContext = createContext();
@@ -44,7 +44,7 @@ export function ProjectTrackingProvider({ children }) {
   }, [mockDashboardData, mockEntryCounts, mockRecentEntries]);
 
   // Load dashboard data function - MVP implementation
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -64,7 +64,7 @@ export function ProjectTrackingProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [mockDashboardData, mockEntryCounts, mockRecentEntries]);
 
   // Add new entry function - MVP implementation
   const addEntry = async (entryType, entryData) => {

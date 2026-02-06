@@ -3,10 +3,10 @@ import '../styles/design-system.css' // 🎨 Industrial Refined Design System
 import { LessonProvider } from '../contexts/LessonContext'
 import { ProjectTrackingProvider } from '../contexts/ProjectTrackingContext'
 import { APITrackingProvider } from '../contexts/APITrackingContext'
-import { AuthProvider } from '../lib/auth/useAuth'
-import AuthLoadingWrapper from '../components/auth/AuthLoadingWrapper' // MISIÓN 221
+import { AuthProvider, useAuth } from '../lib/auth/useAuth'
 import { useRouter } from 'next/router'
 import dynamic from 'next/dynamic'
+import LoadingScreen from '../components/auth/LoadingScreen'
 
 // ⭐ MISIÓN 226.1: Carga condicional del PerformanceMonitor
 // Solo se carga cuando la URL contiene ?profile=true
@@ -19,6 +19,25 @@ import { DefaultSeo } from 'next-seo'
 import { PixelLoader } from '../components/analytics/PixelLoader'
 import CookieBanner from '../components/compliance/CookieBanner'
 
+// 🔧 PHASE 0 FIX v2: Inline auth gate component (no dynamic import)
+function AuthGate({ children }) {
+  const { authState, loading } = useAuth();
+
+
+  console.log('🚪 [AUTH-GATE] Render - authState:', authState, 'loading:', loading);
+
+  // CRITICAL: key prop forces React to unmount/remount when state changes
+  // This prevents LoadingScreen (position:fixed z-index:9999) from staying visible
+  if (authState === 'loading' || loading) {
+    console.log('📺 [AUTH-GATE] Showing LoadingScreen with key="loading"');
+    return <LoadingScreen key="loading" message="Verificando sesión..." />;
+  }
+
+
+  console.log('✅ [AUTH-GATE] Rendering children');
+  return <>{children}</>;
+}
+
 export default function App({ Component, pageProps }) {
   // ⭐ MISIÓN 226.1: Carga condicional basada en URL
   // El PerformanceMonitor SOLO se carga si la URL contiene ?profile=true
@@ -26,7 +45,7 @@ export default function App({ Component, pageProps }) {
   const shouldProfile = router.query.profile === 'true'
 
   return (
-    <main className="font-sans antialiased">
+    <main className="font-sans antialiased" suppressHydrationWarning>
       <DefaultSeo
         title="AI Code Mentor | Domina la Ingeniería de Software con IA"
         description="Plataforma de aprendizaje acelerado para desarrolladores. Transforma tu carrera con el Ecosistema 360 y mentoría basada en IA."
@@ -62,8 +81,8 @@ export default function App({ Component, pageProps }) {
       {shouldProfile && <DynamicPerformanceMonitor />}
 
       <AuthProvider>
-        {/* MISIÓN 221: Wrapper que muestra LoadingScreen durante verificación de sesión */}
-        <AuthLoadingWrapper>
+        {/* 🔧 PHASE 0 FIX v2: Inline AuthGate (no dynamic import) */}
+        <AuthGate>
           <APITrackingProvider>
             <LessonProvider>
               <ProjectTrackingProvider>
@@ -71,7 +90,7 @@ export default function App({ Component, pageProps }) {
               </ProjectTrackingProvider>
             </LessonProvider>
           </APITrackingProvider>
-        </AuthLoadingWrapper>
+        </AuthGate>
       </AuthProvider>
     </main>
   )

@@ -5,7 +5,7 @@
  * Powered by SQLite database with cross-system analytics
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useProjectTracking } from '../../contexts/ProjectTrackingContext';
 import { useRouter } from 'next/router';
 
@@ -22,6 +22,10 @@ const EnhancedUnifiedDashboard = ({ className = '' }) => {
   const [moduleStats, setModuleStats] = useState(null);
   const [loadingModules, setLoadingModules] = useState(false);
   const [currentPhase, setCurrentPhase] = useState(0); // User can set this (F0-F7)
+
+  // Guard to prevent multiple simultaneous calls (React 18 StrictMode)
+  const loadingRef = useRef(false);
+  const loadedRef = useRef(false);
 
   // Ecosistema 360 Curriculum Phases (24 months - 8 fases: F0-F7)
   const curriculumPhases = [
@@ -109,17 +113,33 @@ const EnhancedUnifiedDashboard = ({ className = '' }) => {
   ];
 
   useEffect(() => {
+    // Guard to prevent duplicate calls (React 18 StrictMode double-render)
+    if (loadedRef.current) return;
+    loadedRef.current = true;
+
     loadDashboardData();
     loadModuleStats();
-  }, [loadDashboardData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on mount
 
   const loadModuleStats = async () => {
+    // Prevent simultaneous calls
+    if (loadingRef.current) {
+      console.log('🛑 [DASHBOARD] loadModuleStats already running, skipping');
+      return;
+    }
+
+    loadingRef.current = true;
     setLoadingModules(true);
+
+    console.log('📊 [DASHBOARD] Loading module stats...');
+
     try {
       const response = await fetch('/api/get-modules');
       if (response.ok) {
         const data = await response.json();
         setModuleStats(data.stats);
+        console.log('✅ [DASHBOARD] Module stats loaded successfully');
       } else {
         console.warn('Module stats endpoint returned non-OK status:', response.status);
         // Set default empty stats to prevent UI errors
@@ -145,6 +165,7 @@ const EnhancedUnifiedDashboard = ({ className = '' }) => {
       });
     } finally {
       setLoadingModules(false);
+      loadingRef.current = false;
     }
   };
 
