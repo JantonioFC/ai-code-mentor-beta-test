@@ -42,13 +42,14 @@
 
 | Capa | Tecnología |
 |:-----|:-----------|
-| **Framework** | [Next.js 16](https://nextjs.org/) + React 19 |
+| **Framework** | [Next.js 15.4](https://nextjs.org/) + React 18 |
 | **Estilos** | [TailwindCSS 3](https://tailwindcss.com/) |
 | **Base de Datos** | SQLite ([better-sqlite3](https://github.com/WiseLibs/better-sqlite3)) |
 | **IA** | [Gemini 2.5](https://ai.google.dev/) (Flash/Pro) |
-| **Auth** | JWT + bcryptjs |
+| **Auth** | JWT + bcryptjs ([ver ADR-001](docs/adr/ADR-001-custom-jwt-auth.md)) |
 | **Testing** | Jest (130+ tests) + Playwright |
 | **CI/CD** | GitHub Actions |
+| **Monitoring** | [Sentry](https://sentry.io/) |
 
 ---
 
@@ -142,7 +143,10 @@ ai-code-mentor/
 ├── contexts/           # React Context providers
 ├── __tests__/          # Tests unitarios (Jest)
 ├── e2e/                # Tests E2E (Playwright)
-├── docs/               # Documentación adicional
+├── docs/               # Documentación
+│   ├── adr/            # Architecture Decision Records
+│   ├── api/            # OpenAPI specification
+│   └── walkthroughs/   # Guías paso a paso
 └── scripts/            # Scripts de utilidad
 ```
 
@@ -180,6 +184,8 @@ Usuario → Next.js Page → API Route → LessonService → GeminiRouter → Ge
 |:-------|:---------|:------------|
 | GET | `/api/v1/metrics` | Métricas del sistema (JSON) |
 | GET | `/api/v1/metrics?format=prometheus` | Formato Prometheus |
+
+> 📚 **Documentación completa:** Ver [docs/api/openapi.yaml](docs/api/openapi.yaml) para especificación OpenAPI 3.0.
 
 ---
 
@@ -320,6 +326,14 @@ Ver [LICENSE](LICENSE) para detalles.
 
 ---
 
-**Versión:** v23.0-stable  
+**Versión:** v24.0-stable  
 **Estado:** ✅ Production Ready  
 **Última actualización:** Febrero 2026
+
+---
+
+## 📚 Documentación Adicional
+
+- [📐 Architecture Decision Records](docs/adr/README.md) - Decisiones técnicas clave
+- [📡 API Reference (OpenAPI)](docs/api/README.md) - Documentación de endpoints
+- [📖 Downgrade Walkthrough](docs/walkthroughs/downgrade-walkthrough.md) - Guía de estabilización
