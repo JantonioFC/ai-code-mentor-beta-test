@@ -1,7 +1,7 @@
 import TemplatesClient from './TemplatesClient';
 
 export const metadata = {
-    title: 'Plantillas Educativas | AI Code Mentor',
+    title: 'Plantillas Educativas - AI Code Mentor',
     description: 'Centro de plantillas educativas del Ecosistema 360',
 };
 

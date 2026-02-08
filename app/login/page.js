@@ -1,7 +1,7 @@
 import LoginClient from './LoginClient';
 
 export const metadata = {
-    title: 'Iniciar Sesión | AI Code Mentor',
+    title: 'Iniciar Sesión - AI Code Mentor',
     description: 'Accede a tu cuenta de AI Code Mentor - Ecosistema 360',
 };
 

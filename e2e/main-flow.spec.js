@@ -2,8 +2,8 @@ import { test, expect } from '@playwright/test';
 
 // Test E2E de Flujo Crítico: Carga de Landing -> Login -> Verificación
 test('Main Flow: Landing loads and Login Modal works', async ({ page }) => {
-    // 1. Navegar a Landing (Wait for network idle to ensure hydration)
-    await page.goto('http://localhost:3000', { waitUntil: 'networkidle' });
+    // 1. Navegar a Landing (Wait for load to ensure hydration)
+    await page.goto('http://localhost:3000', { waitUntil: 'load' });
 
     // 2. Verificar Diseño Industrial (Titulo presente - Loose match)
     // Usamos getByRole para ser más accesibles y robustos

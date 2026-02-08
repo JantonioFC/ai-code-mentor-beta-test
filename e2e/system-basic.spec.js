@@ -146,8 +146,8 @@ test.describe('🚀 Sistema AI Code Mentor - Tests Básicos', () => {
     // Cargar página principal
     await page.goto('/');
 
-    // Esperar a que se carguen scripts
-    await page.waitForLoadState('networkidle');
+    // Esperar a que se carguen elementos clave (evitar networkidle flaky)
+    await expect(page.locator('h1')).toBeVisible({ timeout: 10000 });
 
     // Filtrar errores críticos vs warnings
     const criticalErrors = errors.filter(error =>

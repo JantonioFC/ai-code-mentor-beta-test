@@ -68,7 +68,7 @@ test.describe('IRP Integration Tests (Integrated Architecture)', () => {
         await page.goto('http://localhost:3000/peer-review');
 
         // Esperar a que cargue
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('load');
 
         const url = page.url();
         const title = await page.title();

@@ -1,7 +1,7 @@
 import DashboardClient from './DashboardClient';
 
 export const metadata = {
-    title: 'Panel de Control | AI Code Mentor',
+    title: 'Panel de Control - AI Code Mentor',
     description: 'Dashboard principal del ecosistema educativo Ecosistema 360',
 };
 

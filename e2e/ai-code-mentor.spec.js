@@ -147,7 +147,7 @@ test.describe('🔐 AUTENTICACIÓN - Suite de Pruebas', () => {
 
     // Navegar al panel
     await page.goto(TEST_CONFIG.PAGES.PANEL);
-    await page.waitForLoadState('networkidle', { timeout: 10000 });
+    await page.waitForLoadState('load', { timeout: 10000 });
 
     // Buscar botón de logout
     const logoutSelectors = [
@@ -214,7 +214,7 @@ test.describe('📊 PANEL DE CONTROL - Validación de Widgets', () => {
 
     // Navegar al panel
     await page.goto(TEST_CONFIG.PAGES.PANEL);
-    await page.waitForLoadState('networkidle', { timeout: 10000 });
+    await page.waitForLoadState('load', { timeout: 10000 });
     console.log('✅ [M-274] Navegado a Panel de Control (autenticación híbrida activa)');
   });
 
@@ -287,7 +287,7 @@ test.describe('📚 CURRÍCULO - Navegación y Carga de Datos', () => {
 
     // Navegar a módulos
     await page.goto(TEST_CONFIG.PAGES.MODULOS, { timeout: 30000 });
-    await page.waitForLoadState('networkidle', { timeout: 10000 });
+    await page.waitForLoadState('load', { timeout: 10000 });
     console.log('✅ [M-274] Navegado a Módulos (autenticación híbrida activa)');
   });
 
@@ -376,7 +376,7 @@ test.describe('🎯 GENERACIÓN DE LECCIONES - Core Loop', () => {
 
     // Navegar a módulos
     await page.goto(TEST_CONFIG.PAGES.MODULOS);
-    await page.waitForLoadState('networkidle', { timeout: 10000 });
+    await page.waitForLoadState('load', { timeout: 10000 });
     console.log('✅ [M-274] Navegado a Módulos para Core Loop (autenticación híbrida activa)');
   });
 
@@ -581,20 +581,20 @@ test.describe('🚀 SMOKE TEST - Verificación General del Sistema', () => {
 
       // 4. Analíticas accesible (NUEVO)
       await page.goto(TEST_CONFIG.PAGES.ANALITICAS);
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('load');
       await expect(page.locator('h1:has-text("Analíticas Detalladas")')).toBeVisible();
       results.analytics = true;
       console.log('✅ Analíticas: OK');
 
       // 5. Módulos accesible
       await page.goto(TEST_CONFIG.PAGES.MODULOS);
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('load');
       results.modules = true;
       console.log('✅ Módulos: OK');
 
       // 6. Sandbox accesible
       await page.goto(TEST_CONFIG.PAGES.SANDBOX);
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('load');
       results.sandbox = true;
       console.log('✅ Sandbox: OK');
 
