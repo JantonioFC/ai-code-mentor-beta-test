@@ -1,13 +1,8 @@
 // next.config.cjs
 // next.config.cjs
-let withBundleAnalyzer = (config) => config;
-try {
-  withBundleAnalyzer = require('@next/bundle-analyzer')({
-    enabled: process.env.ANALYZE === 'true',
-  });
-} catch (e) {
-  console.warn('⚠️ @next/bundle-analyzer not installed, skipping analysis...');
-}
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+});
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
